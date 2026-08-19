@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: PII Sanitizer API
+  description: API for detecting and masking Personally Identifiable Information (PII) in text and JSON payloads. Designed for high-speed, algorithmic redaction without external dependencies.
+  version: 1.0.0
+servers:
+  - url: https://{YOUR_WORKER_URL}.workers.dev
+    description: Cloudflare Worker Edge
+paths:
+  /health:
+    get:
+      summary: API Health Check
+      description: Returns the operational status of the API.
+      responses:
+        '200':
+          description: API is operational
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
+  /sanitize/text:
+    post:
+      summary: Sanitize Plain Text
+      description: Scans a text string and masks emails, credit cards, standard phone numbers, and IPv4 addresses.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  example: "Contact john.doe@example.com or call 555-123-4567. Card: 4111 1111 1111 1111."
+      responses:
+        '200':
+          description: Successfully sanitized text
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  original_length:
+                    type: integer
+                    example: 77
+                  sanitized_text:
+                    type: string
+                    example: "Contact [EMAIL] or call [PHONE]. Card: [CREDIT_CARD]."
+                  processing_time_ms:
+                    type: integer
+                    example: 1
+        '400':
+          description: Invalid Request Payload
+  /sanitize/json:
+    post:
+      summary: Sanitize JSON Payload
+      description: Recursively traverses a JSON object, masking known sensitive key names (e.g., password, token) and sanitizing string values for PII.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payload
+              properties:
+                payload:
+                  type: object
+                  description: The arbitrary JSON structure to be sanitized.
+                  example:
+                    user:
+                      name: "John Doe"
+                      email: "john@example.com"
+                      password: "supersecretpassword"
+      responses:
+        '200':
+          description: Successfully sanitized JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sanitized_payload:
+                    type: object
+                    example:
+                      user:
+                        name: "John Doe"
+                        email: "[EMAIL]"
+                        password: "[REDACTED]"
+                  processing_time_ms:
+                    type: integer
+                    example: 2
+        '400':
+          description: Invalid Request Payload
