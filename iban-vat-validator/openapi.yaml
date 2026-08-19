@@ -1,0 +1,114 @@
+openapi: 3.0.3
+info:
+  title: IBAN, BIC & VAT Validator
+  description: >
+    Validates IBAN, BIC/SWIFT, and EU VAT number formats using official
+    checksum algorithms (ISO 13616 mod-97 for IBAN, UK modulus-97 for VAT).
+    Catch malformed identifiers before they hit your database or payment
+    processor. Sub-50ms responses, no external dependencies.
+
+
+    Note: this performs structural and checksum validation only. It does not
+    query a live government or banking registry (e.g. VIES, SWIFT directory),
+    so a result of "valid" confirms the identifier is well-formed, not that
+    it is currently active or registered to a real entity.
+  version: "1.0.0"
+servers:
+  - url: https://iban-vat-validator.youni.workers.dev
+
+paths:
+  /iban/validate:
+    get:
+      summary: Validate IBAN
+      description: Checks IBAN structure, per-country length, and ISO 13616 mod-97 checksum.
+      parameters:
+        - name: value
+          in: query
+          required: true
+          schema:
+            type: string
+            example: DE89370400440532013000
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                input: DE89370400440532013000
+                normalized: DE89370400440532013000
+                valid: true
+                checks:
+                  format: true
+                  knownCountry: true
+                  length: true
+                  checksum: true
+                country: DE
+
+  /bic/validate:
+    get:
+      summary: Validate BIC / SWIFT code
+      description: Checks ISO 9362 structure (8 or 11 characters) and extracts bank, country, location and branch codes.
+      parameters:
+        - name: value
+          in: query
+          required: true
+          schema:
+            type: string
+            example: DEUTDEFF500
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                input: DEUTDEFF500
+                normalized: DEUTDEFF500
+                valid: true
+                checks:
+                  format: true
+                  length: true
+                bankCode: DEUT
+                countryCode: DE
+                locationCode: FF
+                branchCode: "500"
+
+  /vat/validate:
+    get:
+      summary: Validate EU VAT number
+      description: >
+        Checks per-country VAT format. Full modulus-97 checksum implemented
+        for GB; format-only validation for DE, FR, IT, ES, NL, BE, IE, SE, PL.
+      parameters:
+        - name: country
+          in: query
+          required: true
+          schema:
+            type: string
+            example: GB
+        - name: value
+          in: query
+          required: true
+          schema:
+            type: string
+            example: GB123456782
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                input: GB123456782
+                normalized: GB123456782
+                country: GB
+                valid: true
+                checks:
+                  knownCountry: true
+                  format: true
+                  checksum: true
+                note: "Structural/checksum validation only. Does not confirm active registration with the tax authority."
