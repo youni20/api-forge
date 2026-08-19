@@ -1,0 +1,103 @@
+openapi: 3.0.3
+info:
+  title: Cron Expression Translator & Scheduler API
+  description: API for translating cron expressions into human-readable descriptions and forecasting upcoming execution timestamps.
+  version: 1.0.0
+servers:
+  - url: https://{YOUR_WORKER_URL}.workers.dev
+    description: Cloudflare Worker Edge
+paths:
+  /health:
+    get:
+      summary: API Health Check
+      description: Returns the operational status of the API.
+      responses:
+        '200':
+          description: API is operational
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
+  /cron/explain:
+    get:
+      summary: Translate Cron Expression
+      description: Converts a standard 5-part cron expression into a clear, human-readable sentence.
+      parameters:
+        - name: expression
+          in: query
+          required: true
+          description: Standard 5-part cron expression (e.g., 0 12 * * MON-FRI)
+          schema:
+            type: string
+            example: "0 12 * * MON-FRI"
+      responses:
+        '200':
+          description: Successfully translated cron expression
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  expression:
+                    type: string
+                    example: "0 12 * * MON-FRI"
+                  description:
+                    type: string
+                    example: "Runs at 12:00 PM (noon), Monday through Friday."
+        '400':
+          description: Missing or invalid expression parameter
+  /cron/next-runs:
+    get:
+      summary: Forecast Next Executions
+      description: Calculates and returns an array of upcoming execution timestamps based on the provided cron expression.
+      parameters:
+        - name: expression
+          in: query
+          required: true
+          description: Standard 5-part cron expression
+          schema:
+            type: string
+            example: "0 12 * * *"
+        - name: count
+          in: query
+          required: false
+          description: Number of future timestamps to return (default is 5)
+          schema:
+            type: integer
+            example: 3
+      responses:
+        '200':
+          description: Successfully calculated upcoming runs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expression:
+                    type: string
+                    example: "0 12 * * *"
+                  requested_count:
+                    type: integer
+                    example: 3
+                  next_runs:
+                    type: array
+                    items:
+                      type: string
+                      format: date-time
+                    example:
+                      - "2026-08-20T12:00:00.000Z"
+                      - "2026-08-21T12:00:00.000Z"
+                      - "2026-08-22T12:00:00.000Z"
+        '400':
+          description: Missing or invalid parameters
